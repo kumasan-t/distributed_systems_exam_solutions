@@ -149,3 +149,141 @@ P4: delivered(m5,m6)
 spurious message, therefore
 P2: delivered(m2,m3)
 P4: delivered(m2)
+
+==============================
+Ex. 3
+
+BestEffortBroadcast
+
+Specifications:
+	- Best-effort validity:	For any two processes p_i and p_j, if p_i and p_j are correct 
+							then every message broadcast by p_i is eventually deliered by p_j
+	- No duplication: 		No message is delivered more than once.
+	- No creation:			if a message m is delivered by some process p_j, then m was previously
+							broadcast by some process p_i.
+Uses:
+	- PerfectPointToPointLinks
+
+ReliableBroadcast
+
+Specifications:
+	- Validity: 			if a process p_i broadcasts a message m, then p_i eventually delivers
+							m.
+	- No duplication
+	- No creation
+	- Agreement: 			if a message m is delivered by some correct process p_i, then m is 
+							eventually delivered by every correct process p_j.
+
+Two implementations possible: Lazy and Eager
+
+Lazy Reliable Broadcast:
+
+Implements:
+	Reliable Broadcast
+
+Uses:
+	BestEffortBroadcast (beb)
+	PerfectFailureDetector (P)				==> synchronous system.
+
+upon event <Init> do
+	delivered := 0
+	correct := PI 							PI stands for all processes.
+	For each p_i in PI: from[p_i] := 0		Sets to zero the vector of processes.
+
+upon event <rbBroadcast, m> do
+	trigger <bebBroadcast, [DATA,self, m]>
+
+upon event <bebDeliver, [DATA, s, m]> do
+	if ( m !in from[s] ) then
+		trigger <rbDeliver | s, m>
+		from[s] := from[s] U {m}
+		if s !in correct then
+			trigger <bebBroadcast | [DATA, s, m]>
+
+upon event <PCrash | p> do
+	correct := correct \ {p}
+	for all m in from[p] do
+		trigger <bebBroadcast | [DATA, p, m]>
+
+Eager Reliable Broadcast:
+
+Implements:
+	Reliable Broadcast
+
+Uses:
+	BestEffortBroadcast (beb)
+
+upon event <Init> do
+	delivered := 0
+
+upon event <rbBroadcast | m> do
+	delivered := delivered U {m}
+	trigger <rbDeliver | self, m>
+	trigger <bebBroadcast | [DATA, self, m]>
+
+upon event <bebDeliver | [DATA, s, m]> do
+	if m !in delivered then
+		delivered := delivered U {m}
+		trigger <rbDeliver | s, m>
+		trigger <bebBroadcast | [DATA, s, m]>
+
+The two models are deeply different: Lazy Reliable Broadcast is compliant to a synchronous system model,
+indeed it requires the usage of a Perfect Failure Detector; it's lazy becase it retransmit a message only if 
+a process has been detected as crashed. 
+Eager Reliable Broadcast instead has a more appropriate use on asynchronous models since there's no requirements
+over a failure detector, circumventing the need of that by relaying the message delivered to any process. 
+This relaying mechanism is what guarantees the agreement property of rbBroadcast. It is eager in the sense that it 
+forwards any delivered message, no matter what.
+Performance of the two scheme are also different: 
+Eager -->	the relaying mechanism in the eager version of rbBroadcast
+			makes the algorithm be costly. In the best case (no crashes) the algorithm requires a single communication
+			step and O(N^2) messages are sent. In the worst case, should the process crash in sequence, the algorithm
+			incur in O(N) steps and O(N^2) messages.
+Lazy --> 	If the sender does not crash then the algorithm requires a single communication step and O(N)
+			messages to rb-deliver a message to all-processes. Otherwise it may take O(N) steps and O(N^2) messages
+			in the worst case (if the processes crash in sequence).
+
+==============================
+
+Ex. 4
+
+Assumptions:	here we use a modified version of an Eager Reliable Broadcast that is
+				forward every new incoming message to the process i+1. We assume that
+				Consensus makes use of the same broadcast in order to work.
+
+Implement Ringed Total Order Broadcast
+
+Uses: 
+	- PointToPointPerfectLink as pp2p
+	- Consensus as c
+
+upon event <Init> do
+	delivered := 0
+	round := 0
+	unordered := 0
+	wait := FALSE
+
+upon event <toBroadcast | m> do
+	unordered := unordered U {m}
+	trigger <pp2pSend | O_i(P_i), m, round>		O_i(P_i) return the next live process starting from P_i
+
+upon event <pp2pDeliver | m, s_m>
+	if (m !in unordered) then
+		unordered := unordered U {[s_m, m]}
+		trigger <pp2pSend | O_i(P_i), m, s_m>
+
+upon unordered != 0 && wait == FALSE do
+	wait := TRUE
+	trigger <cPropose | unordered>
+
+upon event <cDecide | decided> do
+	delivered := delivered U decided
+	unordered := unordered \ decided
+	decided := sort(decided) 					by some deterministic order
+	for all (s_m, m) in decided
+		trigger <toDeliver | s_m, m>
+	wait:= FALSE
+	round:= round + 1
+
+^ probably there is some error, the oracle returns the next live process but we don't know what happens
+if a process crashes in the middle of a communication.
