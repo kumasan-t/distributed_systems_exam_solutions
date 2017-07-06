@@ -1,0 +1,151 @@
+Exam 15-02-2016
+==============================
+Ex. 1
+
+Avalaibility, Partition-resiliance and Consistency are 3 important properties that a designer must consider
+in the design phase of its system. Since we are talking about distributed systems, we cannot give up the 
+partition-tolerance property, thus by the CAP theorem we must give up one property among Availability and
+Consistency.
+This means that in a distributed system we can achieve only two property over the 3 quoted above: there are
+systems like BigTable by Google that are based on the properties of consistency and partition-tolerance, 
+other systems like Dynamo from Amazon focus on the availability and partition-tolerance.
+Giving up on availability means that in presence of a network failure, the system will return a time-out or 
+an error message if a particular information cannot be guaranteed to be updated to its latest version.
+Giving up on consistency means that in presence of a network failure, the system will always answer with 
+the most recent value of the information, even if it cannot be guaranteed that is up to date.
+If we give up on partitions then Consistency and Availability can be guaranteed; this is what happen with 
+services linke single-site databases, clusters of databases. The main traits of such services are 2-phase 
+commits and cache-validation protocols.
+
+==============================
+Ex. 2
+
+TO Specifications:
+	- Non-Uniform Validity
+	- Uniform Integrity
+	One among the two:
+	- Uniform Agreement
+	- Non-Uniform Agreement
+	One among the four:
+	- Strong Uniform Total Order
+	- Weak Uniform Total Order
+	- Strong Non-Uniform Total Order
+	- Weak Non-Uniform Total Order
+------------------------------
+Non-Uniform Validity:
+if a correct process TO-casts a message m, then some correct process will eventually TO-deliver m.
+------------------------------
+Uniform Integrity:
+For any message m, every process p TO-delivers m at most once, and only if m was previously TO-cast by some process.
+
+------------------------------
+-----AGREEMENT EXPLAINED------
+------------------------------
+
+Uniform Agreement:
+If a process TO-delivers a message m, then all correct processes will eventually TO-deliver m.
+------------------------------
+Non-Uniform Agreement:
+if a correct process TO-delivers a message m, then all correct processes will eventually TO-deliver m.
+------------------------------
+Both formulation enforce all correct process to deliver the same set of messages, the difference 
+between the two properties lies on resitrictions imposed on the set of messages that can be 
+delivered by faulty processes.
+UA imposes that each message delivered by some process (correct or not) is also delivered by every correct
+process (in any order). This means that faulty processes are allowed to omit the delivery of some messages
+delivered by some other process. Thus, when a run satisfy UA then A FAULTY PROCESS DELIVERS A SUBSET OF THE 
+MESSAGES DELIVERED BY CORRECT PROCESSES.
+
+On the contrary, NUA allows faulty processes to deliver messages that are not delivered by any other processes.
+Therefore, when considering a run satisfying NUA, THE SET OF MESSAGES DELIVERED BY A FAULTY PROCESS INTERSECTS 
+THE SET OF MESSAGES DELIVERED BY CORRECT PROCESSES (WITH THE INTERSECTION POSSIBLY EMPTY) i.e. we can't say
+anything about the messages delivered by faulty processes.
+
+Even simpler: 
+-UA: if a process wants to deliver m and crash, then m is delivered anyways.
+-NUA: if a faulty process wants to deliver m and crash, then m may be discarded.
+
+------------------------------
+-------ORDER EXPLAINED--------
+------------------------------
+
+Strong Uniform Total Order (SUTO):
+If some process TO-delivers some message m before message m', then a process TO-delivers m' only after it has 
+TO-delivered m.
+------------------------------
+Weak Uniform Total Order (WUTO):
+If processes p and q both delivers message m and m', then p delivers m before m' if and only if q TO-delivers m 
+before m'.
+------------------------------
+Strong Non-Uniform Total Order (SNUTO):
+If some correct process TO-delivers some message m before message m', then a correct process TO-delivers m' only 
+after it has TO-delivered m.
+------------------------------
+Weak Non-Uniform Total Order (WNUTO):
+If correct processes p and q both delivers message m and m', then p delivers m before m' if and only if q TO-delivers m
+before m'.
+
+SUTO means that until some process omits to deliver a message (which can even occur at the run starting time), all processes
+have delivered exactly the same ordered set of messages. The set of messages delivered by a process after a delivery omission
+has to be disjoint by the set of message.
+
+WUTO means that it imposes an order only on pairs of messages delivered by pairs of distinct processes. WUTO does not prevent a
+process from omitting to deliver a message while still continuing to deliver the same messages delivered by other processes. The 
+sequence of messages delivered by a process can contain holes with respect to the sequences of messages delivered by other 
+processes. What's important is that if m has been delivered before m' by a process q, then the process p also must deliver m before
+the process m'.
+
+SNUTO allows faulty processes to change the order of message deliveries as well as occasionally omit the delivery of some message.
+In contrast, correct process are forced to agree on a prefix of the ordered set of delivered messages and to deliver messages
+distinct from those delivered by other correct processes after a delivery omission occur.
+
+WNUTO allows faulty processes to change the order of message deliveries while inheriting from WUTO the possibility to
+have holes in the sequence of message delivered by process.
+
+------------------------------
+---COMBINING ORD. AND AGR.----
+------------------------------
+
+TO(UA,SUTO):
+After a delivery omission occurs, a faulty process cannot deliver any message, and its sequence of delivered messages
+remains the same until it crashes.
+
+TO(NUA,SUTO):
+Allows the process to delivers spurious messages; due to SUTO, the set of message delivered by the faulty process after
+the spurious one have to be disjoint from those delivered by other processes.
+
+TO(UA,WUTO):
+Allows a faulty process to occasionally omit the delivery of some message. It means that as long as the message
+order is respected (by pair of processes), a faulty process can still deliver messages, as long as (thanks to UA)
+is the same set of messages delivered by the other correct processes.
+
+TO(NUA,WUTO):
+Admits runs such that a faulty process occasionally omits the delivery of some message due to WUTO and delivers 
+spurious messages due to NUA.
+
+TO(UA,SNUTO) and TO(UA, WNUTO):
+They are equivalent. Since there is UA, faulty processes are not allowed to deliver spurious messages. However due
+to WNUTO, faulty processes are allowed to omit occasionally the deliver of some messages and to deliver messages in
+an order different from the one chosen by correct processes.
+
+TO(NUA,SNUTO) and TO(NUA,WNUTO):
+Equivalent. Allows faulty processes to deliver spurious message, omit the delivery of some messages and deliver the
+messages in an order different fromm the one chosen by correct processes.
+
+------------------------------
+
+Answers to the exercise:
+
+1. Process P1 and P3 are two correct processes and they deliver the same set of message. Process P4 and P2 are two 
+faulty processes and they deliver spurious messages m5 and m6 and also omit to deliver of m1. Therefore the 
+strongest Total Order specification stasified is TO(NUA,WUTO).
+
+2. In order to have TO(NUA,SUTO) the faulty process and the correct processes must have disjoint sets of delivered
+messages, therefore
+P2: delivered(m5,m6)
+P4: delivered(m5,m6)
+
+3. In order to have TO(UA,WUTO) the faulty process must respect the pair order delivery, but they cannot generate 
+spurious message, therefore
+P2: delivered(m2,m3)
+P4: delivered(m2)
