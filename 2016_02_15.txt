@@ -287,3 +287,97 @@ upon event <cDecide | decided> do
 
 ^ probably there is some error, the oracle returns the next live process but we don't know what happens
 if a process crashes in the middle of a communication.
+
+==============================
+
+Ex. 5
+
+Rotating Coordinator Consensus (Leader Role)
+
+Uses:
+	PerfectPoint2PointLinks (pp2p)
+	ReliableBroadcast (rb)
+	BestEffortBroadcast (beb)
+	EventuallyPerfectFailureDetector (<>P)
+
+function leader(r) returns processID is
+	return p_i: rank(p_i) = r mod (N+1)
+
+upon event <Init> do
+	round := 1
+	proposal := decided := null
+	suspected := estimate-set[] := ack-set[] := nack-set[] := 0
+	for all r do
+		estimate[r] := ack[r] := false
+		proposed[r] := null
+
+upon event <ucPropose | v > do
+	proposal := (v,0) 
+
+upon event <pp2pDeliver | p_i, [ESTIMATE, r, e]> do
+	estimate-set[r] := estimate-set[r] U {e}
+
+upon(leader(round) == self && (|estimate-set[round]| > N/2)) do
+	proposal := highest(estimate-set[round])
+	trigger <bebBroadcast | [PROPOSE, round, proposal]
+
+upon event <pp2pDeliver | p_i, [ACK, r]> do
+	ack-set[r] := ack-set[r] U {p_i}
+
+upon event <pp2pDeliver | p_i, [NACK, r]> do
+	nack-set[r] := nack-set[r] U {p_i}
+
+upon (leader(round) == self && nack-set[round] != 0) do
+	round := round + 1
+
+upon (leader(round) == self && (ack-set[round] > N/2)) do 
+	trigger <rbBroadcast | [DECIDE, proposal]>
+
+//Witness role
+
+upon event (proposal != null && estimate[round] == false) do
+	estimate[round] == true
+	trigger <pp2pSend | leader(round), ESTIMATE[round, proposal]>
+
+upon event <bebDeliver | p_i, [PROPOSE, r, v]> do 
+	proposed[r] := v
+
+upon event <proposed[round] != null && ack[round] == false> do
+	proposal := (proposed[round], round)
+	ack[round] := true
+	trigger <pp2pSend | leader(round), [ACK, r]>
+
+upon event (leader(round) in suspected && ack[round] == false) do
+	ack[round] := true
+	trigger <pp2pSend | leader(round), [NACK, round]>
+
+upon event <rbDeliver | p_i, [DECIDED, v] && decided == false do
+	decided := v
+	trigger <ucDecided | v>
+
+upon event <suspect | p_i> do
+	suspected := suspected U {p_i}
+
+upon event <restore | p_i> do
+	suspected := suspected \ {p_i}
+
+The 4 phases of the rotating coordinator consensus are:
+
+- Phase 1:
+	each process sends its current estimation of the decided value (labelled with the current round
+	value, the timestamp) to the coordinator c.
+
+- Phase 2:
+	the coordinator c gathers a majority of such estimated values, selects the one with the highest
+	timestamp and sends this value to every process as new estimation.
+
+- Phase 3:
+	for each correct process p two options are valid:
+	- p receives the estimated value and sends back an ack message to c to show that p has received
+	and adopted the new estimation
+	- p suspects c, then p sends a nack message to c and p goes to the next round
+
+- Phase 4:
+	c gathers a majority of acks, c decides the current estimated value as the decided value and c sends
+	this information to all process through a reliable broadcast.
+	If c receives one nack, c goes to the next round.
