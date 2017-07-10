@@ -106,19 +106,24 @@ P3 --S,M4---------D,M4--D,M2--D,M1----D,M3---------- X <-- wrong delivery wrt FI
 Consider messages M1 and M2 sent by P1. For each run of P1, P2, M1 is always delivered before M2.
 P3 run is faulty, here M2 is delivered before M1 violating the FIFO Order.
 
+Example of Causal Order
+
 P1 ----S,M1------D,M1-------D,M2----D,M3--------
 P2 ---------S,M2----D,M1-----D,M2----D,M3-------
-P3 -----D,M1-----S,M3---D,M3----------D,M2------
+P3 -----D,M1-----S,M3---D,M3----------D,M2------ X <-- wrong delivery wrt Causal Order
 
-This is Causal Order, message M1,M2,M3 are delivered in their sending order. M3 is the faulty
+This is Causal Order, message M1,M2,M3 are delivered in their sending order. P3 is the faulty
 process here because it delivers M3 before having delivered M2.
+
+Example of Total Order:
 
 P1 ----S,M1------D,M2-------D,M3----D,M1--------
 P2 ----S,M2------D,M2-------D,M3----D,M1--------
 P3 ----S,M3------D,M2-------D,M3----D,M1--------
 
 Here in Total Order what's important is that every process delivers his message according to a 
-total order that IS NOT the order in which the message are sent.
+total order that IS NOT the order in which the message are sent. Due to the various nature of 
+the Total Order specification, only a single correct run is shown.
 ==============================
 Ex. 3
 (Dijkstra's Algorithm not done this year)
