@@ -1,7 +1,124 @@
 ==============================
 Ex. 1
+
+Consensus is a paradigm that is intended to make a set of process agree on some value. It is one of 
+the most common problem in a distributed system, where processes starts with their own opinion and 
+then converge on one of the value each one proposed. A strong result in the topic states that is 
+impossible to obtain consensus in an asynchronous system and also in the presence of a single crash, 
+or better, it doesn't state that it is impossible to reach consensus, it states that no algorithm 
+can always reach consensus in bounded time; in reality is higly unlinkely to occur.
+Uniform Consensus properties are:
+	- Validity
+	- Integrity
+	- Termination
+	- Uniform Agreement
+
+Validity: if all process propose the same value v, then all correct process decide v.
+Integrity: if a correct process decides v, then v must have been decided by some correct process.
+Termination: every correct process decides some value.
+Agreement: every correct process must agree on the same value.
+Uniform Agreement: every process must agree on the same value.
+
+So the difference between Uniform Agreement and Agreement is that the latter talks only about correct
+processes while the Uniform Agreement also includes faulty processes.
+
+An example of uniform consensus is the Flooding Consensus Algorithm.
+
+Flooding Consensus Algorithm
+Uses:	BestEffortBroadcast as beb
+		PerfectFailureDetector as P
+
+upon event <Init> do 
+	correct := PI
+	round := 1
+	decided := false
+	proposal-set := 0
+	for i = 1 to N do
+		delivered[i] := 0
+
+upon event <crash | p_i> do 
+	correct := correct \ {p_i}
+
+upon event <ucPropose | v> do
+	proposal-set := proposal-set U {v}
+	trigger <bebBroadcast | [MY-SET, 1, proposal-set]>
+
+upon event <bebDeliver | p_i, [MY-SET, r, new-set]> do
+	proposal-set := proposal-set U new-set
+	delivered[r] := delivered[r] U {p_i}
+
+upon (correct <=  delivered[round]) && (decided == false) do
+	if round = N then
+		decided := min(proposal-set)
+		trigger <ucDecide | decided>
+	else
+		round := round + 1
+		trigger <bebBroadcast | [MY-SET, round, proposal-set]>
+
+Decision on values happen after N rounds, in which is possible to resist up to 1 process crash
+each round. Uniform Agreement is granted by the fact that we are sure that all the process who
+reached round N agreed on the same value.
+The cost of a uniform consensus is O(N^3) messages exchanged.
+
 ==============================
 Ex. 2
+
+Ordered Communication is orthogonal to Reliable Communication 
+Ordered Communication is obtained adding one or more properties to Reliable Communication.
+
+FIFO Order: if a process sends a message m before the message m', then no correct processes de-
+liver m' if it has not already delivered m.
+
+FIFO BROADCAST = RELIABLE BROADCAST + FIFO ORDER
+
+Causal Broadcast is a specification that states that if a process sends a message m and another 
+process sends m' after m, then all correct process delivers m' after m. More formally
+
+Causal Order: if the sending of a message m causally precedes the sending of a message m', then
+every correct process has to deliver m before delivering m'.
+
+Causal Broadcast = Reliable Broadcast + Causal Order
+
+By this definition, it follows that 
+CAUSAL ORDER ==> FIFO ORDER
+but
+FIFO ORDER =/=> CAUSAL ORDER
+
+More specifically CAUSAL ORDER = FIFO ORDER + LOCAL ORDER
+i.e. if a process delivers a message m before sending a messagge m', then no correct process
+delivers m' if it has not already delivered m.
+
+Total Order is orthogonal with respect to FIFO and Causal Order. Total order would accept indeed
+a computation in which a process sends n messages to a group, and each of the processes of the 
+group delivers such messages in the reverse order of their sendings. The computation is totally 
+ordered but it is not FIFO.
+
+PN -----S,M1----D,M2-----------
+(S,M1): Sends M1
+(D,M2): Delivers M2
+
+Example of FIFO:
+
+P1 ----S,M1---S,M2--D,M1---D,M2--D,M4----D,M3-------
+P2 ------S,M3--D,M3--D,M1-----D,M4---D,M2-----------
+P3 --S,M4---------D,M4--D,M2--D,M1----D,M3---------- X <-- wrong delivery wrt FIFO Order
+
+Consider messages M1 and M2 sent by P1. For each run of P1, P2, M1 is always delivered before M2.
+P3 run is faulty, here M2 is delivered before M1 violating the FIFO Order.
+
+P1 ----S,M1------D,M1-------D,M2----D,M3--------
+P2 ---------S,M2----D,M1-----D,M2----D,M3-------
+P3 -----D,M1-----S,M3---D,M3----------D,M2------
+
+This is Causal Order, message M1,M2,M3 are delivered in their sending order. M3 is the faulty
+process here because it delivers M3 before having delivered M2.
+
+P1 ----S,M1------D,M2-------D,M3----D,M1--------
+P2 ----S,M2------D,M2-------D,M3----D,M1--------
+P3 ----S,M3------D,M2-------D,M3----D,M1--------
+
+Here in Total Order what's important is that every process delivers his message according to a 
+total order that IS NOT the order in which the message are sent.
 ==============================
 Ex. 3
 (Dijkstra's Algorithm not done this year)
