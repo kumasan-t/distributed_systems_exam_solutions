@@ -129,5 +129,88 @@ Ex. 3
 (Dijkstra's Algorithm not done this year)
 ==============================
 Ex. 4
+
+SUTO Total Order with Clocks
+
+Specifications:
+	- Validity
+	- Integrity
+	- Agreement
+	- Ordered
+
+Uses:
+	- Timely Best-effort Broadcast as tbeb
+	- Timely Perfect Failure Detector tP
+	- Consensus
+
+upon event <Init> do
+	correct := PI
+	delivered := 0
+	unordered := 0
+	wait := FALSE
+	round := 0
+
+upon event <tPCrash | p_i>
+	correct := correct \ {p_i}
+
+upon event <toBroadcast | m> do
+	trigger <tbebBroadcast | m, round>
+
+upon event <tbebDeliver | p_i, m, r> do
+	if (m !in unordered)
+		unordered := unordered U {(r,m)}
+
+upon (unordered != {} && wait == FALSE) do 
+	wait := TRUE
+	trigger <propose | round, unordered>
+
+upon event <decide | r, decided> do 
+	delivered := delivered U unordered
+	unordered := unordered \ decided
+	decided := sort(decided)
+	for all (s, m) in decided
+		trigger <toDeliver | s,m>
+	round := round + 1
+	wait := FALSE
+
+This is the case in which Total Order uses two already defined primitives, otherwise:
+
+upon event <Init> do
+	correct := PI
+	delivered := 0
+	unordered := 0
+	wait := FALSE
+	round := 0
+
+upon event <tbebBroadcast | m, round> do
+	trigger <bebBroadcast | m, round, time(self)>
+
+upon event <tbebDeliver | p_i, m, r, t> && (time(self) - t <= delta) do
+	if (m !in unordered)
+		unordered := unordered U {(r,m)}
+
+//By setting wait = TRUE the process will never reach the event in which he will
+//propose its set, since SUTO and UA would be valid also for the faulty process, the process won't do
+//anything because of the SUTO and UA constraint.
+upon event <tbebDeliver | p_i, m, r, t> && (time(self) - t >= delta) 
+	wait := TRUE
+	unordered := 0
+
+upon event <tPCrash | p_i> do
+	correct := correct \ {p_i}
+
+upon (unordered != {} && wait == FALSE) do 
+	wait := TRUE
+	trigger <propose | round, unordered>
+
+upon event <decide | r, decided> do 
+	delivered := delivered U unordered
+	unordered := unordered \ decided
+	decided := sort(decided)
+	for all (s, m) in decided
+		trigger <toDeliver | s,m>
+	round := round + 1
+	wait := FALSE
+
 ==============================
 Ex. 5
