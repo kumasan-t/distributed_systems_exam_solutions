@@ -7,10 +7,18 @@ Ex. 3
 ==============================
 Ex. 4
 
+Comment: the code is really simple, think of the topology like a network in which 
+group are local area networks and leaders are routers/gateways to the Internet. leaders are
+connected so they are the one responsible for inter-group communication and intra-group message
+forwarding. Processes communicate the messages they want to be forwarded to the leader which
+will gather all the messages from its group and will agree with the other leaders on a subset 
+of messages that has to be delivered (regular Consensus). After the leaders decided, the resulting set
+is forwarded to every process within the respective group and will be to-delivered.
+
 Inter-Group Total Order
 
 upon event <Init> do
-	decided := unordered := 0
+	decided := unordered := 0	
 	delivered := 0
 	from[] := 0
 	round := 1
@@ -42,6 +50,12 @@ upon event <rbDeliver | [DECIDED, sn, m] do
 	for all (sn, m) in decided
 		trigger <toDeliver | sn, m>
 
+//process only
+upon event <Crash | p_i> do
+	if (p_i == leader)
+		shutdown(self)
+	else
+		correct := correct \ {p_i}
 ==============================
 Ex. 5
 ==============================
