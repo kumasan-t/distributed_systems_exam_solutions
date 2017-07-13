@@ -24,10 +24,85 @@ goes worst because if all process becomes suspected then there are no more corre
 permanently suspect crashed processes, thus violating the Eventual Strong Completeness property.
 ==============================
 Ex. 2
+
+The CAP Theorem is an important result that states that in case of failures, a system must give up one
+of these 3 properties: Availability, Consistency or Partition-Resilience. 
+Consider a systems composed of two servers G1 and G2 and a client C.
+
+   G1		Both servers keep track of a value V whose value is initially set to v_0.
+  /	|		G1 and G2 can communicate each other and with external client. A client
+ /  |		can request to write and read from any server.
+C   |		The proof:
+ \  |		Assume for contradiction that there is a system that is available, consistent
+  \ |		and partition tolerant. 
+   G2		Let's partition the system then by removing the link between the servers G1 and
+   			G2.
+
+   G1		Suppose the client requests that v_1 be written on G1. Since our system is available
+  /			G1 must respond. Since the network is partitioned, however G1 cannot replicate its
+ /  		data to G2.
+C   		Next we want our client to read to G2. Since system is available G2 must respond and
+ \  		since the network is partitioned, G2 cannot update its value from G1. It returns v_0.
+  \ 		G2 returns v_0 to our client after the client had already written v_1 to G1. This is 
+   G2		inconsistent. We assumed a consisted, available, partition tolerant system existed but
+we have just showed that there exists an execution for any such systems in which the system acts
+inconsistely. Thus no such system exists.
 ==============================
 Ex. 3
+
+(not to be done in this academic year)
 ==============================
 Ex. 4
+
+Passive replication is done by keeping all the backups servers updated. When a client wants to 
+perform an operation over the primary server, this will propagate this operation to all the other
+passive replicas which will update their state and will answer back an ACK to the primary server.
+When the primary server has collected all the ACK of the correct replicas it will reply to the client.
+In case of failure of the primary server, the systems will act differently depending on the scenario. 
+Thanks to a leader selection algorithm, a backup server becomes the leader and start serving the 
+clients that request operations on the system:
+SCENARIO 1.
+The server crash while it was delivering a reply to the client. In this case the connection will be 
+dropped (pp2p) and after a timeout the client will try again to perform its operation. A new replica is elected 
+leader then, the new primary, finds that the crashed primary has already computed the reply for the client.
+It will select the computed answer to the client without updating the state of the other replicas.
+
+SCENARIO 2.
+The server crashes before having collected all the acks. In this case the new primary must recompute 
+the answer to the query and propagate it through all the replicas and then after having collected 
+all the ACK, reply to the client. Need of Guaranteed Atomicity, all-or-nothing updates!
+
+SCENARIO 3.
+The primary crashes while processing the request. In this case the client waits a timeout and then
+tries to send the query to the new primary server. After processing the information the server 
+send the state updates to all the backups.
 ==============================
 Ex. 5
+
+(By Leslie Lamport's paper on Byzantine Failures:
+https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/The-Byzantine-Generals-Problem.pdf)
+Byzantine failure, important notes:
+2 property must be satisfied:
+	A - All loyals generals (correct processes) decide upon the same plan of action	
+	B - A small number of traitors cannot cause the loyal generals to adopt a bad plan
+In order to let A be satisfied we need to be sure that every loyal general obtain the 
+same values (i.e. a byzantine process cannot send different values to different processes)
+so the first thing to be sure is that a process sends the same information to all the other
+processes in the network such that:
+
+"Every loyal general must obtain the same information v(1) .... ,v(n)."
+
+We don't care about the information of traitors, because what we want is that the decision is 
+made only by loyal generals (correct processes). Thus we need the following requirement
+
+"If the i-th general is loyal, then the value that he sends must be used by every loyal general
+as the value of v(i)".
+
+The last two requirements can be rewritten as 
+
+"Any two loyal generals share the same information of value v(i)"
+
+
+
+
 ==============================
