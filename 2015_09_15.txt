@@ -1,0 +1,33 @@
+==============================
+Ex. 1
+
+Eventual Strong Completeness: 	eventually, all crashed processes are permanently suspected by correct
+								processes.
+Eventual Strong Accuracy:		eventually, no correct process is suspected by any correct process.
+
+No, it doesn't, since every time a suspected process apparently is discovered to be alive then 
+the timeout is halved: this is a huge problem because the timer itself is never incremented thus
+ignoring the fact that after a certain time t the whole asynchronous system will perform as a
+synchronous one. By doing this, the algorithm actually reduce the possibility of a process to show 
+that it is indeed alive by reducing the time window in which a process should send its heartbeat to 
+all the other processes of the system. In order to correct this, we should add a condition before 
+cycling among all the processes in the timeout event that says:
+
+if ( alive intersection suspected != 0 ) then 
+	period := period + delta
+
+So maybe if a process is suspected but he answered to the heartbeat then it is possible that the delay
+was too short.
+By reducing the delay there is a conflict with the Eventual Strong Accuracy property, in fact it does 
+the opposite by causing all process that can't answer in a small windows frame to be suspected. And it 
+goes worst because if all process becomes suspected then there are no more correct processes that can 
+permanently suspect crashed processes, thus violating the Eventual Strong Completeness property.
+==============================
+Ex. 2
+==============================
+Ex. 3
+==============================
+Ex. 4
+==============================
+Ex. 5
+==============================
