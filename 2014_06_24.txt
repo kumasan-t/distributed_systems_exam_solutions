@@ -121,4 +121,30 @@ upon event <Crash | p_i> do
 		correct := correct \ {p_i}
 ==============================
 Ex. 5
+
+Implements:
+	perfectQuiescentPointToPointLinks (pQp2p)
+
+Uses:
+	fairLossyPointToPointLinks (fp2p)
+
+upon event <Init> do
+	delivered := 0
+	time_out := delay
+
+upon event <pQp2pSend | dest, m> do
+	ack_m := false
+	while(!ack_m) do
+		trigger <fp2pSend | dest, m>
+		delay(time_out)
+
+upon event <fp2pDeliver, src, ack_m> do
+	ack_m := true
+
+upon event <fp2pDeliver, src, m> do
+	if m !in delivered then
+		delivered := delivered U {m}
+		trigger <pQp2pDeliver | m>	
+	trigger <fp2pSend | src, ack_m>
+
 ==============================
