@@ -1,9 +1,72 @@
 ==============================
 Ex. 1
+
+Passive software replication is done by using primary backup services that are able to offer the same 
+service as the primary server in the case the primary server crashes.
+
+client	---op(arg),P1-----------------------------------------------------------------------getResponse------->
+P1		---------------get_op(arg),update replicas------------------------getAllACK---sendResponse,client----->
+P2		-------------------------------------------update---ACK,P1-------------------------------------------->
+P3		-------------------------------------------------update---ACK,P1-------------------------------------->
+
+When an update message is received by backup, each backup updates its state and sends back an ack to the 
+primary. The primary server waits for all the correct backups to update their states and then sends back 
+to the client its response. There are different cases that depends on which point a primary server crashes:
+
+SCENARIO 1
+Primary fails after the client receives the answer. The client could not receive the response due to perfect 
+point to point link, if the response is lost, client retransmits request after a timeout. The new primary then 
+will recognize the request re-issued by the client so it is not necessary to reprocess the whole request and more
+importantly there's no need to update the replicas.
+
+SCENARIO 2
+Primary fails before updating the replicas. This is the simpler scenario, in which the client, after not getting
+any response from the primary server, will query one of the backup server that will process the client request and
+will update all the other replicas.
+
+SCENARIO 3
+Primary fails after sending update messages and before receiving all the ack messages. Here we need the property
+of GUARANTEED ATOMICITY that states that update is received either by all or by no one. When a primary fails there
+is the need to elect another primary among the correct replicas.
 ==============================
 Ex. 2
+
+Strong Accuracy: no process is detected by any process before it crashes.
+Eventual Strong Accuracy: eventually, no correct process is suspected by any correct process.
+
+Eventually synchronous systems are asynchronous systems that after a time t EVENTUALLY become synchronous (however 
+it is not true that after time t the system will stay synchronous forever). This means that we can no longer tell
+if a process has crashed or not because the way in which perfect failure detector works is based on the assumption
+that if a process doesn't send its heartbeat within a certain period then that process is considered dead; this
+period has a fixed length and it's the same for all the process of the system. Synchronous systems have known upper
+bound on the time taken by a message to rech a destination so it is possible to tell when a process has failed or 
+not by looking if it answers or not. Asynchronous communications are unbounded so it's not possible to know when or 
+if a process will deliver its message.
+Thus the reason is that since there is known upper bound, a synchrounous system can detect easily if a process has 
+crashed or not. An asynchronous system will know the true state of the whole system only after the system will 
+perform as a synchronous one, that is why there is a process-restore mechanism in the eventually synchronous that 
+allows a suspected process to be considered correct after it went suspected. 
 ==============================
 Ex. 3
+
+1)	r1() = {0 or 3},
+	r2() = {3 or 2},
+	r3() = {3 or 2},
+	r4() = {3 or 2 or 1},
+	r5() = {3 or 2 or 1}.
+
+2)	r1() = {0 or 3},
+	r2() = {3 or 2},
+	r3() = {3 or 2},
+	r4() = {3 or 2 or 1} iff (r3() = {3} or r4() = {3}) else r4() = {2 or 1},
+	r5() = {3 or 2 or 1} iff (r3() = {3} or r4() = {3}) else r5() = {2 or 1}.
+
+3)	r1() = {3},
+	r2() = {0}	X <-- violating the Validity Property of Regular Registers
+	r3() = {2},
+	r4() = {3}  X <-- violating the Ordering Property of Atomic Registers
+	r5() = {1}.
+
 ==============================
 Ex. 4
 
