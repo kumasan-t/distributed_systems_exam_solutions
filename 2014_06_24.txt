@@ -1,0 +1,47 @@
+==============================
+Ex. 1
+==============================
+Ex. 2
+==============================
+Ex. 3
+==============================
+Ex. 4
+
+Inter-Group Total Order
+
+upon event <Init> do
+	decided := unordered := 0
+	delivered := 0
+	from[] := 0
+	round := 1
+
+//leader and processes
+upon event <toBroadcast | m> do
+	trigger <rbBroadcast | round, m>
+
+//leader only
+upon event <rbDeliver | p_i, m, r>
+	if (m !in unordered)
+		unordered := unordered U {m,r}
+		from[round] := from[round] U {p_i}
+
+//leader only
+upon unordered != 0 && from[round] >= correct do
+	trigger <cPropose | unordered>
+
+//leader only
+upon event <cDecide | decided>
+	delivered := delivered U decided
+	unordered := unordered \ {decided}
+	decided := sort(decided)
+	trigger <rbBroadcast | [DECIDED, decided]>
+	round := round + 1
+
+//leader and processes
+upon event <rbDeliver | [DECIDED, sn, m] do
+	for all (sn, m) in decided
+		trigger <toDeliver | sn, m>
+
+==============================
+Ex. 5
+==============================
