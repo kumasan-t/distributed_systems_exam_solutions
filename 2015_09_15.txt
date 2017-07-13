@@ -1,8 +1,8 @@
 ==============================
 Ex. 1
 
-Eventual Strong Completeness: 	eventually, all crashed processes are permanently suspected by correct
-								processes.
+Eventual Strong Completeness:	 	eventually, all crashed processes are permanently suspected by correct
+					processes.
 Eventual Strong Accuracy:		eventually, no correct process is suspected by any correct process.
 
 No, it doesn't, since every time a suspected process apparently is discovered to be alive then 
@@ -30,7 +30,7 @@ of these 3 properties: Availability, Consistency or Partition-Resilience.
 Consider a systems composed of two servers G1 and G2 and a client C.
 
    G1		Both servers keep track of a value V whose value is initially set to v_0.
-  /	|		G1 and G2 can communicate each other and with external client. A client
+  / |		G1 and G2 can communicate each other and with external client. A client
  /  |		can request to write and read from any server.
 C   |		The proof:
  \  |		Assume for contradiction that there is a system that is available, consistent
@@ -82,7 +82,7 @@ Ex. 5
 (By Leslie Lamport's paper on Byzantine Failures:
 https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/The-Byzantine-Generals-Problem.pdf)
 Byzantine failure, important notes:
-2 property must be satisfied:
+2 properties must be satisfied:
 	A - All loyals generals (correct processes) decide upon the same plan of action	
 	B - A small number of traitors cannot cause the loyal generals to adopt a bad plan
 In order to let A be satisfied we need to be sure that every loyal general obtain the 

@@ -4,7 +4,7 @@ Ex. 1
 Passive software replication is done by using primary backup services that are able to offer the same 
 service as the primary server in the case the primary server crashes.
 
-client	---op(arg),P1-----------------------------------------------------------------------getResponse------->
+client	 	---op(arg),P1-----------------------------------------------------------------------getResponse------->
 P1		---------------get_op(arg),update replicas------------------------getAllACK---sendResponse,client----->
 P2		-------------------------------------------update---ACK,P1-------------------------------------------->
 P3		-------------------------------------------------update---ACK,P1-------------------------------------->
