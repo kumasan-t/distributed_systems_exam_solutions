@@ -7,6 +7,103 @@ Layer 1 - Content-based physical overlay.
 Layer 2 - Complete message broadcast tree.
 Layer 3 - Actual message forwarding path.
 
+A content based network is a point-to-point application level overlay consisting of
+client nodes and router nodes connected by communication links. A CBN is connection-
+less and best-effort in nature.
+Each node advertises a predicate that defines messages of interest for that node and,
+thus, the messages that the node intends to receive. The content-based service is 
+intended to deliver a message to all the client nodes that advertised predicates 
+matching the message.
+Each node implements a service interface consisting of 2 methods:
+
+send_message(m) := sends a message to all the interested nodes.
+set_predicate(p) := defines the content based "address" of the node.
+
+set_predicate(p) is a stateless function for 2 reasons:
+1. the interface is simple and non-ambiguos
+2. easy to implement other value-added interface models as higher layer services, i.e.
+easy to "extend" in functionalities.
+
+Every node advertises predicates from their issuer towards every other node, along 
+the broadcast tree rooted at the issuer. This produces forwarding state that "attracts"
+each message towards nodes that advertise predicates matching the message. In order to 
+avoid loops, this forwarding states is used in combination with the brodcast tree rooted
+at the source of the message, thus the forwarding function proceeds by forwarding a message
+along the broadcast tree rooted at the sender, following only the branches that have 
+matching predicates.
+
+Broadcast layer can be implemented using a global spanning tree (e.g. minimal spanning tree),
+per-source trees (e.g. shortest path trees), or other broadcast methods such as reverse-path
+forwarding. So the broadcast function B(s,i) returns a set of output interfaces; these interfaces
+varies according to which kind of implementation (as said above) we used for our broadcast
+function.
+
+B must also satisfy the all-pairs path simmetry property that states that for a forwarding path
+to exists it must be the intersection between the broadcast tree from a node to a receiver and
+vice versa.
+==> for each pair of nodes u and v, the broadcast function defines two broadcast trees T_u and T_v
+rooted at nodes u and v respectively, such that the path u --> v in T_u is congruent to the reverse
+path v --> u in T_v.
+
+Node address ==	A predicate (a total boolean function) that identifies the messages of interest
+				of that node.
+p(m) == 		evaluation of a predicate over a message m. p selects m when p(m) = true. The
+				selection of all messages selected by p is defined as selection(p)
+
+p_1 covers p_2 <=> for each m p_2(m) => p_1(m) 
+equivalent to
+p_1 covers p_2 <=> selection(p_2) <= selection(p_1)
+By saying p_1 > p_2 we say that p_1 covers p_2.
+
+For each application running on the content based network nodes, a content-based forwarding table
+is mantained and it associates a content-based address to each external interface and to the
+local application interface.
+A function Fc, given a message, selects the subset of interfaces associated with predicates matching
+m. Result of Fc is combined with the broadcast function B, computed for the original source of m.
+I_0 is the local interface to the application, I_1 ... I_k are external interfaces.
+A message is therefore forwarded along the set of interfaces defined by the following formula:
+
+B((source), incoming_if(m)) U {I_0} intersect Fc(m) returns {I_1, I_2, ... , I_k}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^ <---- REMEMBER: B(s,i) returns the representation of the broadcast tree.
+
+Routing protocols, two mechanisms:
+Push mechanism based on RECEIVER ADVERTISEMENTS (RAs).
+Pull mechanism based on SENDER REQUEST, UPDATE REPLIES (SR/UR).
+
+RAs
+issued by nodes periodically, their purpose is to push routing information from a receiver out to
+all potential senders, thereby setting up the forwarding state necessary to deliver messages of interest
+to the receiver.
+RAs are propagated using through the content based network using the following combined broadcast and 
+content-based protocol:
+
+Content-Based RA ingress filtering:	a router that receives a RA on interface i issued by node r and 
+									carrying content-based address pRA first verifies whether or not
+									the content-based address p_i, associated with interface i, covers
+									pRA. If p_i covers pRA then the router simply drops pRA.
+Broadcast RA propagation:			if p_i does not cover pRA, then the router computes the set of next
+									hop links on the broadcast tree rooted in r (i.e. B(r,i)) and
+									forwards the RA along those links.
+Routing table updates:				if p_i does not cover pRA then the router also updates its routing 
+									table, adding pRA to p_i computing p_i <-- p_i OR pRA.
+
+SR/UR
+A router uses Sender Request to pull content based addresses from all receivers in order to updated its 
+routing table. The results of an SR come back to the issuer of the SR through Update Replies (UR).
+SR/UR is designed to complement RA protocol in a way that is intended to balance the effect of the 
+ADDRESS INFLATION caused by RAs.
+An SR issued by s is broadcast to all routers, following the broadcast paths defined at each router 
+by the broadcast function B(s,i). Request number + Issuer identifier form a unique identifier for the SR.
+A router processes an SR by forwarding it to downstream routers, and by generating a UR. Each UR carries
+a content based address as well as the identifier of the SR that prompted it. URs are returned to the 
+original issuer of the SR.
+How does it works?
+A router send SR to pull addresses from other routers.
+ - A leaf router in the broadcast tree immediately replies with a UR containing its content-based address p0
+ - A non-leaf router assembles its UR by combining its own content-based address p0 with those of the URs
+   received from downstream routers, and then sends its UR upstream.
+ - The issuer of the SR, processes incoming URs by updating its routing table. In particular, an issuer receiving
+   a UR carrying predicate pUR from interface i updates its routing table entry for interface i with p_i <-- pUR.
 ==============================
 Ex. 2
 ==============================
