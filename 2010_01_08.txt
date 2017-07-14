@@ -1,0 +1,18 @@
+==============================
+Ex. 1
+SIENA . Event Notification Service
+Siena's 3 Layers Architecture (Bottom to Top):
+
+Layer 1 - Content-based physical overlay.
+Layer 2 - Complete message broadcast tree.
+Layer 3 - Actual message forwarding path.
+
+==============================
+Ex. 2
+==============================
+Ex. 3
+==============================
+Ex. 4
+==============================
+Ex. 5
+==============================
