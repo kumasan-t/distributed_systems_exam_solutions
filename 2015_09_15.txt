@@ -130,13 +130,13 @@ upon event <bebDeliver | p_i, [MY-SET, r, new-set]> do
 upon (correct <= delivered[round]) && (decided == false) do
 	different-values := rounded-proposal-set[round - 1] \ rounded-proposal-set[round]
 	numberOfCorrect := count(different-values)
-	if (numberOfCorrect > 2f) then
+	if (numberOfCorrect > (N - numberOfCorrect)*2) then
 		proposal-set[round] := proposal-set[round] \ different-values
-		if round == N then
-			decided := min(proposal-set)
-			trigger <ucDecide | decided>
-		else
-			round := round + 1
-			trigger <bebBroadcast | [MY-SET, round, proposal-set]
+		decided := choose(proposal-set)
+		trigger <bebBroadcast | decided>
+		trigger <cDecide | decided>
+	else
+		round := round + 1
+		trigger <bebBroadcast | proposal, round>
 
 ==============================
