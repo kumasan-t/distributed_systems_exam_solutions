@@ -46,9 +46,9 @@ rooted at nodes u and v respectively, such that the path u --> v in T_u is congr
 path v --> u in T_v.
 
 Node address ==	A predicate (a total boolean function) that identifies the messages of interest
-				of that node.
-p(m) == 		evaluation of a predicate over a message m. p selects m when p(m) = true. The
-				selection of all messages selected by p is defined as selection(p)
+		of that node.
+p(m) == 	evaluation of a predicate over a message m. p selects m when p(m) = true. The
+		selection of all messages selected by p is defined as selection(p)
 
 p_1 covers p_2 <=> for each m p_2(m) => p_1(m) 
 equivalent to
@@ -78,14 +78,14 @@ RAs are propagated using through the content based network using the following c
 content-based protocol:
 
 Content-Based RA ingress filtering:	a router that receives a RA on interface i issued by node r and 
-									carrying content-based address pRA first verifies whether or not
-									the content-based address p_i, associated with interface i, covers
-									pRA. If p_i covers pRA then the router simply drops pRA.
-Broadcast RA propagation:			if p_i does not cover pRA, then the router computes the set of next
-									hop links on the broadcast tree rooted in r (i.e. B(r,i)) and
-									forwards the RA along those links.
-Routing table updates:				if p_i does not cover pRA then the router also updates its routing 
-									table, adding pRA to p_i computing p_i <-- p_i OR pRA.
+					carrying content-based address pRA first verifies whether or not
+					the content-based address p_i, associated with interface i, covers
+					pRA. If p_i covers pRA then the router simply drops pRA.
+Broadcast RA propagation:		if p_i does not cover pRA, then the router computes the set of next
+					hop links on the broadcast tree rooted in r (i.e. B(r,i)) and
+					forwards the RA along those links.
+Routing table updates:			if p_i does not cover pRA then the router also updates its routing 
+					table, adding pRA to p_i computing p_i <-- p_i OR pRA.
 
 SR/UR
 A router uses Sender Request to pull content based addresses from all receivers in order to updated its 
