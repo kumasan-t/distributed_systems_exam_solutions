@@ -102,7 +102,41 @@ The last two requirements can be rewritten as
 
 "Any two loyal generals share the same information of value v(i)"
 
+Implements: Byzantine Consensus
 
+Uses:
+	perfectPointToPointLink (as pp2p)
+	reliableBroadcast (as rb)
 
+upon event <Init> do
+	round := 1
+	decided := false
+	rounded-proposal-set[] := 0
+	proposal-set := 0
+	for i = 1 to N
+		delivered[i] := 0
+
+upon event <ucPropose | v> do
+	proposal-set := proposal-set U {v}
+	rounded-proposal-set[round] := rounded-proposal-set[round] U {v}
+	trigger <bebBroadcast | [MY-SET, round, proposal-set]
+
+upon event <bebDeliver | p_i, [MY-SET, r, new-set]> do
+	rounded-proposal-set[r] := rounded-proposal-set[r] U {v}
+	perProcessMessages[p_i][r] := perProcessMessages[p_i][r]
+	proposal-set := proposal-set U new-set
+	delivered[r] := delivered[r] U p_i
+
+upon (correct <= delivered[round]) && (decided == false) do
+	different-values := rounded-proposal-set[round - 1] \ rounded-proposal-set[round]
+	numberOfCorrect := count(different-values)
+	if (numberOfCorrect > 2f) then
+		proposal-set[round] := proposal-set[round] \ different-values
+		if round == N then
+			decided := min(proposal-set)
+			trigger <ucDecide | decided>
+		else
+			round := round + 1
+			trigger <bebBroadcast | [MY-SET, round, proposal-set]
 
 ==============================
