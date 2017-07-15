@@ -106,8 +106,74 @@ A router send SR to pull addresses from other routers.
    a UR carrying predicate pUR from interface i updates its routing table entry for interface i with p_i <-- pUR.
 ==============================
 Ex. 2
+
+Regular Reliable Broadcast
+Uses: 
+	- BestEffortBroadcast 
+Specifications:
+	- Validity: If a correct process p_i broadcasts a message m, then p_i eventually delivers m.
+	- No Duplication: A message is delivered no more than once.
+	- No Creation: If a process p_i delivers a message m, then m was previously broadcasted by process p_j
+	- Agreement: if a correct process p_i delivers a message m, then all correct process delivers m.
+
+Uniform Reliable Broadcast
+Uses: 
+	- BestEffortBroadcast 
+Specifications:
+	- Validity: If a correct process p_i broadcasts a message m, then p_i eventually delivers m.
+	- No Duplication: A message is delivered no more than once.
+	- No Creation: If a process p_i delivers a message m, then m was previously broadcasted by process p_j
+	- Uniform Agreement: if a process p_i delivers a message m, then all correct process delivers m.
+
+Uniformity is a strong property that states that the set of messages delivered by a correct process is a 
+superset of the messages delivered by processes (faulty or not). Thus if a process is faulty, the set of 
+messages delivered may be smaller than the set of messages delivered by the correct processes.
+These assumptions holds for both a synchronous and an asynchronous system model where process can crash.
+In total we have 4 different algorithm that can realize Uniform Reliable Broadcast and Non Uniform Reliable 
+Broadcast:
+
+URB:
+Synchronous   --> Lazy Reliable Broadcast
+Asynchronouse --> Eager Reliable Broadcast
+
+NURN:
+Synchronous   --> All-ACK Uniform Reliable Broadcast
+Asynchronouse --> Majority ACK Uniform Reliable Broadcast
 ==============================
 Ex. 3
+
+Regular Registers Properties:
+- Termination: 	if a correct process invokes an operation, then the operation eventually receives the 
+		corresponding confirmation.
+- Validity:	a read operation returns the last value written or the value concurrently written.
+
+Atomic Registers Properties:
+- Termination
+- Validity
+- Ordering:	if a read returns v2 after a read that it precedes has returned v1 then v1 cannot 
+		be written after v2.
+
+
+1) Regular Register:
+	r1(): {0 or 1}
+	r2(): {1 or 2}
+	r3(): {1 or 2}
+	r4(): {1 or 2}
+	r5(): {1 or 2}
+
+2) Atomic Register:
+	r1(): {0 or 1}
+	r2(): {1 or 2}
+	r3(): {1 or 2}
+	r4(): {1 or 2} iff (r3(): {1} and r2(): {1}) else r4(): {2}
+	r5(): {1 or 2} iff (r3(): {1} and r2(): {1}) else r5(): {2}
+
+3) Regular and Atomic violation:
+	r1(): {0 or 1}
+	r2(): {0}	X <--- violates Validity Property
+	r3(): {2}
+	r4(): {1}	x <--- violates Ordering Property
+	r5(): {2}
 ==============================
 Ex. 4
 ==============================
