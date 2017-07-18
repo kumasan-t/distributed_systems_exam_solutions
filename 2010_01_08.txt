@@ -153,7 +153,6 @@ Atomic Registers Properties:
 - Ordering:	if a read returns v2 after a read that it precedes has returned v1 then v1 cannot 
 		be written after v2.
 
-
 1) Regular Register:
 	r1(): {0 or 1}
 	r2(): {1 or 2}
@@ -165,8 +164,8 @@ Atomic Registers Properties:
 	r1(): {0 or 1}
 	r2(): {1 or 2}
 	r3(): {1 or 2}
-	r4(): {1 or 2} iff (r3(): {1} and r2(): {1}) else r4(): {2}
-	r5(): {1 or 2} iff (r3(): {1} and r2(): {1}) else r5(): {2}
+	r4(): {1 or 2} iff (r3(): {1} or r2(): {1}) else r4(): {2}
+	r5(): {1 or 2} iff (r3(): {1} or r2(): {1}) else r5(): {2}
 
 3) Regular and Atomic violation:
 	r1(): {0 or 1}
@@ -176,6 +175,89 @@ Atomic Registers Properties:
 	r5(): {2}
 ==============================
 Ex. 4
+
+1) 	System A is a simple connected graph of processes. Specifications of Channel A suggest
+	that the channel allows synchronous message exchanges, so the synchronous leader detection
+	with Perfect Failure Detection is implementable in this scenario.
+
+Leader Election
+Uses:	
+	- Perfect Failure Detector (as P)
+
+Specifications:
+	- Accuracy: 			If a process is elected as leader, then all previously leaders have crashed.
+	- Eventual Detection 	If a process is correct, then eventually the process is eligible to become leader.
+
+upon event <Init>
+	suspected := empty
+	leader := false
+
+upon event <pCrash | p_j>
+	suspected := suspected U {p_j}
+
+upon event leader != maxrank(II \ suspected) do
+	leader = maxrank(II \ suspected)
+	trigger <leLeader | leader>
+
+2)	System B is a connected graph with links that have probability to fail. With the assumption that only 
+	processes that have an outgoing Channel B link can fail, it is still possible to implement a leader
+	election algorithm since the reliable channel (which is Channel A) is connected to all the node in the 
+	graph. The requisite here is that the reliable node is the one responsible to forward all the information
+	about crashed processes.
+
+upon event <Init>
+	suspected := empty
+	leader := false
+
+upon event leader != maxrank(II \ suspected) do
+	leader := maxrank(II \ susptected)
+	trigger <leLeader | leader>
+
+//Channel A process
+upon event <pCrash | p_j> do
+	suspected := suspected U {p_j}
+	for all II \ {p_j} do
+		trigger <pp2pSend | [CRASHED, p_j]>
+
+//Channel B processes
+upon event <pp2pDeliver | p_i, [CRASHED, p_j]>
+	suspected := suspected U {p_j}
+	
+3) 	It is not possible to implement a leader election in this case since we have no guarantees that a message 
+	will be delivered. As long as the process with 3 outgoing Channels A is up we can still implement a solution
+	similar to the one chosen in example 2. If the said process crashes then we have that the Strong Accuracy
+	property of the Perfect Failure Detector is no longer guaranteed since communication between processes
+	can fail, thus they can't communicate their HEARTBEATS with certainty.
+
 ==============================
 Ex. 5
+
+Specifications are the same for both, we need VITA (Validity, Integrity, Termination, Agreement). The consensus
+in the synchronous systems is simpler and intuitive, it uses the Perfect Failure Detector in order to communicate
+to all the processes which is the process that crashed and removing it from the decision making mechanism. In 
+eventually synchronous systems things change a bit since we can no longer guarantee Strong Accuracy  and Strong 
+Completeness property from the PerfectFailureDetector, it is guaranteed Eventual Strong Accuracy and Eventual
+Strong Completeness. The algorithm in the eventually synchronous systems has the necessity to elect a leader
+in order to work and it is based on 4 phases:
+
+1) A coordinator is chosen among the correct processes and it is rotating because it changes each round and it is
+selected thanks to a modular function known to all. Each non-leader process sends its current estimation of the 
+value of the decided value to the coordinator.
+
+2) The coordinator receives all the estimations from the processes, selects the one with the highest timestamp and
+sends this value to every process as new estimation.
+
+3) For each correct process p, two options are valid:
+	- The process receives the estimated value and sends back an ACK to the coordinator to show that p has received
+	and adopted the new estimation set.
+	- If p suspect c then a NACK message is sent to the coordinator and p goes to the next round.
+
+4) The coordinator gather all the ACK and NACK messages
+	- If c receives a majority of ACKs, c decides the current estimated value as the decided value and c sends this
+	information to all the processes though a reliable broadcast.
+	- If c receives one NACK, it goes to the next round.
+
+A synchronous systems can reach consensus in 2*N^2 messages exchanged (one communication round). In the worst case
+(n - 1 failures) there may be N^2 communication failures for each communication step.
+An eventually synchronous consensus algorithm reaches consensus in 4 * (N - 1) messages for each process.
 ==============================
