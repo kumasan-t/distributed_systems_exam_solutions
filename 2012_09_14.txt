@@ -1,0 +1,72 @@
+==============================
+Ex. 1
+
+We are speaking of passive replication, what happens is that when a client performs an operation on the primary server then the state
+of the system will be updated on all the backup servers. After all backups have been updated, the primary will return the asnwer to 
+the client. Crash of a primary is managed specifically for each situation that may happen:
+- (to be continued)
+==============================
+Ex. 2
+
+Regular register (1,N) specifications
+	- Termination: if a correct process invokes an operation, then the operation eventually receives the corresponding confirmation.
+	- Validity: a read operation returns the value stored in the registry or the value cuncurrently written on it.
+
+Idea behind regular registers (1,N) is simple, each process stores a local copy of the register. Each read operation returns
+the value stored in its local copy of the register. Each write operation updates the value locally stored at each process the
+writer consider to have not crashed. A write completes when the writer receives an ACK from each process that has not crashed.
+
+Atomic register (1,N) specifications
+	- Termination: as RR
+	- Validity: as RR
+	- Ordering: if a process reads a message v2 after it a read that precedes it has returned v1 then v2 could not have been written 
+				before v1.
+The atomic register works differently: a (1,1) atomic register is built upon a (1,N) regular register. Then we use a set of (1,1)
+atomic register to build a (1,N) atomic register.
+Say p1 is the writer and p2 is the reader. Each write operation on the atomic register writes the pair (value, timestamp) into the
+underlying regular register.
+The reader tracks the timestamp of previously read values to avoid read something old.
+==============================
+Ex. 3
+
+1 --> 2  FIFO Order
+3 --> 4  FIFO Order
+3 --> 5  happen before
+
+1) Satisify Non-Uniform Reliable Broadcast:
+
+	- m1, m2, m3. m4
+
+2) Satisify Uniform Reliable Broadcast:
+
+	- m1, m2, m3, m4, m5 iff m5 is delivered by p2.
+
+3)	1234 satisfies Causal Order and TO(NUA,WUTO) (if the faulty process has spurious message m5 and misses the delivery of m4)
+	12345 TO(UA,SUTO).
+
+==============================
+Ex. 4
+
+upon event <Init> do
+	for all x in II do
+		VCi[x] = 0
+	toDeliver = 0
+	delivered = 0
+
+upon event <deltaCBBroadcast | m> do
+	VCi[i] = CKi
+	for all Px in II
+		trigger <fpl, send | Px, [m, VCi]
+
+upon event <fplDeliver | Pj, [m, VCj]> do
+	if m !in delivered && CKi <== VCj[j] + delta
+		toDeliver := toDeliver U {m, VCj, Pj}
+		VCi[j] := VCj[j]
+	else if m !in delivered && CKi >== VCj[j] + delta
+		VCi[j] := VCj[j]	
+
+upon exists {s, Pj, VCj} s.t. VCj <= VCi
+	delivered := delivered U {m}
+	toDeliver := toDeliver \ {s, Pj, VCj}
+	trigger <deltaCBDeliver | m>
+==============================
