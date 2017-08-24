@@ -1,0 +1,152 @@
+==============================
+Ex. 1
+
+Primary backup pattern consists in a client exchanging messages with a server as usual
+but since consistency is mandatory, the server will propagate the message given by the
+client to all the backup servers. Only after that all the servers updated their state to the
+primary one, the primary server will deliver the response to the client.
+If the primary crashes then the whole system may face several different situations:
+
+1)	Primary fails after the client receives the answer: the client could not receive receive 
+	the response due to pefect point-to-point link, if the response is lost, the client will 
+	forward a new request to the new primary elected among the replicas. The new primary will
+	simply answer to the client since its state has already been updated and there's no need
+	too update the backup servers since they have been updated as well.
+
+2)	Primary fails before sending the update message: here the client does not get an answer
+	thus it will retransimt the request to the newly elected primary server.
+
+3)	Primary fails after sending the updated messages: in this case the client won't get an
+	answer therefore after a delay a new request will be retransmitted to the primary backup.
+	Since the principle of guaranteed atomicity holds, either all the backups are updated to
+	the latest state or no one is updated.
+
+Active replication is a different approach to the same problem: instead of masking all the 
+system replication behind the primary server, the client sends the same request to each server
+present in the system, in this way there is no need of coordinator. However this means that 
+the servers has to be deterministic such that if any replica starts from the same state and 
+receives the same input then they will update their state in a new state that is the same
+for all the other replicas. Client then will receive the same response from each replica.
+To ensure linearizability there is the need to preserve:
+- 	Atomicity: if a replica executes an invocation, all the other correct replicas execute the
+	same invocation.
+- 	Ordering: at least no two other replicas have to execute two invocation in different order.
+
+Therefore we need a TOTAL ORDER BROADCAST. Also the client need to implement that.
+Active replication does not need recovery action upon the failure of a replica.
+
+To answer to the lightweight processes question:
+since lightweight means only primitives, the answer is that primary backup replication is the 
+only one that can run in a lightweight environment, otherwise we would need sofisticate systems
+such as Total order Broadcast to maintain all the replicas updated.
+
+==============================
+Ex. 2
+
+Everything about these two kind of clock rotates around the notion of "happened before" firstly 
+introduced by Lamport: two events are related by a happened before relationship if:
+
+.1 Exists p_i | e -->i e'
+.2 For each message m send(m) --> receive(m)
+	- send(m) is the event of sending a message in a process
+	- receive(m) is the event of receipt of the same message m by another process
+.3 Exists e,e',e'' | (e --> e') AND (e' --> e'')
+
+Pairs of event that are not related by the happened before relation are said to be concurrent and
+we cannot say wether on event happened-before. For any event in a distributed systems, either
+e' --> e'' OR e'' --> e' or e' || e''.
+
+Logical Clocks is a software counting register monotonically increasing its value (not related to 
+physical clock). Each process p_i employes its logical clock L_i to apply a timestamp to events.
+L_i(e) is the logical timestamp assigned, using the logical clock, to a particular event e by process
+p_i.
+
+if e --> e' then L(e) < L(e'). The ordering relation is only a partial ordering, consequently timestamps 
+could not be sufficient to relate two events.
+
+Scalar logical clocks can guarantee that if an event e happened-before an event e' then the timestamp of 
+e would be smaller than the timestamp of e'.
+if e --> e' then L(e) < L(e')
+
+it is not true that 
+if L(e) < L(e') then e --> e'
+ 
+Consequently is not possible, analyzing only scalar clocks, to determine if two events e and e' are
+concurrent or correlated by happened before relation.
+
+Vector clocks comes in aid to this, it is an array of N integer counters maintained by each process
+and similarly to scalar clock, vector clock is attached to message m. Vector clocks allows nodes to 
+order events in happens-before order based on timestamps
+	- Scalar clocks: if e --> e' then L(e) < L(e')
+	- Vector clocks: e --> e' iff L(e) < L(e')
+i.e. Vector Clocks allow to determine if two event are concurrent or related by a happened-before relation.
+
+In a broadcast event a process p_i sends a message to each other process in the system. An event e=broadcast(m)
+causally comes ahead another event e'=broadcast(m') if at least one of the following condition is true
+
+(recursive definition)
+1. E AND E' HAVE BEEN PRODUCED BY THE SAME PROCESS AND BROADCAST(M) HAPPENS BEFORE BROADCAST(M')
+2. E AND E' HAVE BEEN PRODUCED BY 2 DISTINCT PROCESSES BUT E' WAS PRODUCED ONLY AFTER THE DELIVER OF M
+3. EXIST M'' | BROADCAST(M) --> BROADCAST(M'') AND BROADCAST(M'') --> BROADCAST(M')
+
+Causal Order Specification
+(SAFETY): let two broadcast messages m and m' such that broadcast(m) --> broadcast(m'), then each other
+process have to deliver m before m'.
+(LIVENESS): eventually each message will be delivered.
+
+Therefore two broadcast messages m and m' for which brodacast(m) || broadcast(m') will deliver m and m'
+in different order by different sets of processes.
+
+==============================
+Ex. 3
+
+ReliableRingBroadcast:
+Specification:
+	- Validity:
+	- Integrity:
+
+upon event <Init> do
+	from[] := false
+	delivered := false
+	correct := TT
+	nextProcess := (i+1 mod n)
+
+upon event <rbRingBroadcast | m> do
+	trigger <pp2pSend | P_nextProcess, m>
+
+upon event <pp2pDeliver | m, p_j> do
+	if (m !in delivered)
+		delivered := delivered U {m}
+		from[j] := from[j] U m
+		trigger <rbBroadcastDeliver | m>
+		if (p_j ! in correct)
+			trigger <rbRingBroadcast | m>
+
+upon event <PCrash | p_j> do
+	correct:= correct \ {p_j} 
+	if (j == nextProcess) then
+		nextProcess := select(correct) //selects the next process closer to the crashed one
+	trigger <rbRingBroadcast | from[j]>
+
+==============================
+Ex. 4
+
+upon event <Init> do
+	delivered := pending := 0
+	correct := TT
+	forall m do ack_m := 0
+	nextProcess := (i+1 mod n)
+
+upon event <rbRingBroadcast | m> do
+	trigger <pp2pSend | P_nextProcess, m>
+
+upon event <pp2pDeliver | m, p_j> do
+	ack_m := ack_m U {p_j}
+	if (m !in delivered)
+		trigger <rbRingBroadcast | m>
+
+upon correct <= ack_m && m !in delivered do
+	delivered := delivered U {m}
+	trigger <rbRingBroadcast | m>
+
+ 
