@@ -1,0 +1,95 @@
+===============================
+Ex.1
+
+Statement is false, logical scalar clock can't say that an event e1 "happened-before" another event e2
+because the definition of a logical says that
+if e1 --> e2 then L(e1) < L(e2)
+
+Statement is true if we are talking about vector clocks.
+e1 --> e2 <=> L(e1) < L(e2)
+
+===============================
+Ex.2
+
+          UA, SUTO 
+	NUA, SUTO	UA WUTO
+		|	  /		|
+	NUA WUTO		|
+		|		   /
+	  NUA,WNUTO/SNUTO
+
+===============================
+Ex.3
+
+1 --> 2 FIFO 
+1 --> 2 happened-before
+2 --> 4 happenede-before
+
+Causal:
+1,2,3,4
+3,1,2,4
+1,3,2,4
+1,2,4,3
+
+FIFO but not causal:
+1,3,4,2
+1,4,3,2
+4,1,2,3
+3,1,4,2
+3,4,1,2
+4,3,1,2
+4,1,3,2
+
+===============================
+Ex.4
+
+upon event <Init> do
+	LEFT := p_x
+	RIGHT := p_j
+	pending := empty
+	memstatus := ok
+	state := nop
+	grant := 0
+
+upon event <accessMem | R> do
+	state := REQ_CS
+	trigger <FIFOSend | RIGHT, p_i, state>
+	trigger <FIFOSend | LEFT, P_i, state>
+
+upon event <FIFODeliver | LEFT/RIGHT, p_i, s>
+	if s == REQ_CS
+		pending.addLast(p_i) <--- ordered list
+		trigger <FIFOSend | RIGHT/LEFT, p_i, s>
+
+upon exist pending != empty && memstatus != busy do
+	p_j := pending.pop()
+	trigger <pp2pSend | RIGHT, [GRANT, p_i]>
+	trigger <pp2pSend | LEFT, [GRANT, p_i]>
+	memstatus := busy
+
+upon event <pp2pDeliver | RIGHT/LEFT, [GRANT], p_j> do
+	if self == p_j then
+		grant := grant U {p_j}
+	else
+		trigger <pp2pSend | LEFT/RIGHT, [GRANT, p_j]
+
+upon event <pp2pDeliver | RIGHT/LEFT, s, p_j> do
+	if (s == DONE) then
+		memstatus := ok
+		trigger <pp2pSend | LEFT/RIGHT, s, p_j]>
+
+upon correct <= grant && state := REQ_CS do
+	executeOP(R)
+	state := DONE
+	trigger <pp2pSend | RIGHT, state, p_i>
+	trigger <pp2pSend | LEFT, state, p_i>
+	grant := 0
+
+===============================
+Ex.5
+
+CAP theorem states that in a distributed system scenario, if a network fails occurs then it is not
+possible to achieve Consistency, Availability and Partition tolerance thus one of the 3 must be 
+dropped. Since we are in a distributed system scenario, we cannot drop Partition Tolerance, thus
+the choose must be among the two.
+AP == Amazon Dynamo
