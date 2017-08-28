@@ -1,0 +1,74 @@
+On Publisher/Subscribe
+
+Important: Structured vs Unstructured data.
+
+Topic-based selection:		the data propagated is not structured, it is only tagged with the
+							topic it is published in. Subscribers issue subscriptions to topics
+							they are interested in. See this as a "virtual channel" between 
+							publishers and subscribers over some specific topic.
+
+Hierarchy-based selection:	data here is also tagged with the topic it is published in but topics
+							are organized in a hierarchical structure which express the notion of
+							containment between topics. When a subscriber subscribe to a topic, it
+							will receive all the events published in that topic and all the topics
+							present in the corresponding tree. NO STRUCTURED DATA.
+
+Content-based selection:	data is structured, meaning that each subscription can be expressed as
+							a conjunction of CONSTRAINTS expressed on attribute. The ENS filters 
+							out useless events before notifying a subscriber.
+
+ENS is a centralized or distributed system that mediates the content propagation from producers
+to consumers. Modern ENSs are implemented as a distributed system thourgh a set of processes
+called event brokers, forming the so-called overlay network. Clients access the events via brokers
+that mask the system complexity.
+
+An event routing mechanism inside the ENS routes each event inside the ENS from the broker where it
+is published to the broker(s) where it must be notified.
+Publisher --> input broker --> **routing** --> output broker(s)
+
+DIFFERENT TYPES OF ROUTING SYSTEMS:
+
+Event-flooding:				each event is broadcast from the publisher in the whole system. The implemen-
+							tation is straightforward but is very expensive and not efficient. This solution
+							has the highest message overhead with no memory overhead.
+							PROs:
+								.1 easy implementation
+								.2 no memory overhead
+
+							CONS:
+								.1 large message overhead
+								.2 not scalable
+
+Subscription-flooding:		each subscription is copied on every broker, in order to build locally complete
+							subscription tables. These tables are then used to locally match events and direclty
+							notify interested subscribers.
+							PROs:
+								.1 event diffusion is optimal (gets rid of useless message forwarding)
+								.2 single hop notification, every addresses of subscribers are stored in each
+								broker of the ENS along with informations about matching rules. When a broker 
+								receives a content, it knows exactly to which subscriber the content must be 
+								forwarded, thus the single hop. NO NEED TO TRAVERSE THE BROKER GRAPH.
+							CONS:
+								.1 impractical in applications where subscribers change frequently
+								.2 large memory overhead
+
+Filter-based routing:		subscriptions are partially diffused in the system and used to build routing tables.
+							During event diffusion these tables dynamically build a multicast tree that connects
+							the publisher to all and only the interested subscribers. NEED TO TRAVERSE THE GRAPH,
+							this is something similiar to IPTABLES.
+							PROs:
+								.1 scalable
+								.2 much less memory overhead
+								.3 much less message overhead (fewer messages wrt event-flooding)
+								.4 consistency of tables allows easy repairing upon failures.
+							CONS:
+								.1 speed highly depend on the matching function.
+								.2 topology of the network also determines the worst case
+
+Rendezvous-based routing:	something like "meet in the middle" paradigm: there are 2 functions, SN and EN.
+							Given a subscription s, SN(s) returns all the event brokers node which are responsible
+							for storing s and forwarding to the subscribers that subscribed it.
+							Given an event e, EN(e) returns all the event brokers nodes in which the rule they store
+							match against e. (ritorna tutti i nodi in cui ci sono delle regole che matchano con l'evento
+							e). Rendezvous means actually "meeting spot" ("punto d'incontro"). 
+							This approach works iff intersection between EN(e) and SN(s) is different from 0.
